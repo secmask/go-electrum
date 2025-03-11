@@ -124,7 +124,19 @@ func (e *apiErr) Error() string {
 type response struct {
 	ID     uint64 `json:"id"`
 	Method string `json:"method"`
-	Error  string `json:"error"`
+	Error  struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+	} `json:"error"`
+}
+
+type APIError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+func (A APIError) Error() string {
+	return fmt.Sprintf("code: %d, error: %s", A.Code, A.Message)
 }
 
 func (s *Client) listen() {
@@ -145,16 +157,15 @@ func (s *Client) listen() {
 			result := &container{
 				content: bytes,
 			}
-
 			msg := &response{}
 			err := json.Unmarshal(bytes, msg)
 			if err != nil {
 				if DebugMode {
 					log.Printf("Unmarshal received message failed: %v", err)
 				}
-				result.err = fmt.Errorf("Unmarshal received message failed: %v", err)
-			} else if msg.Error != "" {
-				result.err = errors.New(msg.Error)
+				result.err = fmt.Errorf("unmarshal received message failed: %v", err)
+			} else if msg.Error.Message != "" {
+				result.err = &APIError{Message: msg.Error.Message, Code: msg.Error.Code}
 			}
 
 			if len(msg.Method) > 0 {
@@ -245,7 +256,7 @@ func (s *Client) request(ctx context.Context, method string, params []interface{
 	if resp.err != nil {
 		return resp.err
 	}
-
+	log.Println(string(resp.content))
 	if v != nil {
 		err = json.Unmarshal(resp.content, v)
 		if err != nil {
