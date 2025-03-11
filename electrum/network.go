@@ -256,7 +256,6 @@ func (s *Client) request(ctx context.Context, method string, params []interface{
 	if resp.err != nil {
 		return resp.err
 	}
-	log.Println(string(resp.content))
 	if v != nil {
 		err = json.Unmarshal(resp.content, v)
 		if err != nil {
